@@ -47,18 +47,47 @@ screen_size = (500,200)
 font_name_ko = 'undotum'
 font_bg = (0,0,0)
 font_fg = (230,230,230)
-font_size = 80
-font_aa = 0
+font_size_large = 80
+font_size_small = 20
+font_aa = True
 
 pygame.init()
 screen = pygame.display.set_mode(screen_size)
-font_ko = pygame.font.Font(pygame.font.match_font(font_name_ko),font_size)
-font_en = pygame.font.get_default_font()
+font_ko = pygame.font.Font(pygame.font.match_font(font_name_ko),font_size_large)
+font_en = pygame.font.Font(pygame.font.get_default_font(),font_size_small)
 
 def draw_text(text,font,pos):
   ren = font.render(text,font_aa,font_fg,font_bg)
   screen.blit(ren,pos)
   pygame.display.flip()
+
+def prompt(itext,font,pos):
+  draw_text(itext,font,pos)
+  (cursor_x,cursor_y) = pos
+  cursor_x += font.size(itext)[0]
+  sizes = []
+  text = ''
+  while True:
+    event = pygame.event.wait()
+    if event.type == pygame.KEYDOWN:
+      if event.key == pygame.K_RETURN:
+        break
+      elif ((event.key>=pygame.K_a) and (event.key<pygame.K_z)) or (event.key == pygame.K_SPACE):
+        char = chr(event.key)
+        draw_text(char,font,(cursor_x,cursor_y))
+        char_size = font.size(char)
+        cursor_x += char_size[0]
+        sizes.append(char_size)
+        text += char
+      elif (event.key == pygame.K_BACKSPACE) and (len(sizes) > 0):
+        char_size = sizes.pop()
+        screen.fill(font_bg,rect=pygame.Rect(cursor_x-char_size[0],cursor_y,cursor_x,cursor_y+char_size[1]))
+        pygame.display.flip()
+        cursor_x -= char_size[0]
+        text = text[:-1]
+      elif event.key == pygame.K_ESCAPE:
+        sys.exit()
+  return text
 
 while True:
   cmd = 'select * from words where rowid=? and level<=?'
@@ -71,16 +100,23 @@ while True:
   except:
     pass
 
-  print korean + ' (' + str(level) + ')'
-
   screen.fill(font_bg)
-  draw_text(korean,font_ko,(10,10))
+  draw_text(korean +' ('+str(level)+')',font_ko,(10,10))
+  guess = unicode(prompt('English: ',font_en,(20,130)))
 
-  guess = unicode(raw_input('English: '))
   if guess_distance(guess,english) <= 0.2:
-    print 'Correct: ' + english
+    result = 'Correct: ' + english
   else:
-    print 'Answer: ' + english
-  print '='*80
-  print 
-  print 
+    result = 'Answer: ' + english
+  draw_text(result,font_en,(20,160))
+
+  up_count = 0
+  while True:
+    event = pygame.event.wait()
+    if event.type == pygame.KEYUP:
+      if event.key == pygame.K_ESCAPE:
+        sys.exit(0)
+      else:
+        up_count += 1
+    if up_count >= 2:
+      break
